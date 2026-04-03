@@ -68,9 +68,12 @@ Return ONLY valid .ics file content.`;
           <div key={i} className="mb-4 p-3 border rounded-xl">
             <input
               className="w-full mb-2 p-2 border rounded"
-              placeholder="Medication Name"
+              placeholder="Item Name"
+              maxLength={5}
               value={itm.name}
-              onChange={(e) => updateItem(i, "name", e.target.value)}
+              onChange={(e) =>
+                updateItem(i, "name", e.target.value.slice(0, 5))
+              }
             />
             <span>&nbsp;&nbsp;&nbsp;</span>
             <input
