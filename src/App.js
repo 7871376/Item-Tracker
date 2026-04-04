@@ -96,19 +96,24 @@ export default function App() {
       const text = await response.text();
       console.log("RAW RESPONSE:", text);
 
-      // Try parsing safely
+      // Parse JSON
+      const data = JSON.parse(text);
+
+      // ✅ Extract ICS (this is the correct path based on your output)
       const rawText =
-        data.output_text ||
-        data.output?.[0]?.content?.[0]?.text;
+        data.output?.[0]?.content?.[0]?.text ||
+        data.output_text;
 
       if (!rawText) {
         console.error("FULL RESPONSE:", data);
-        alert("No content returned from API");
+        alert("No ICS content returned");
         return;
       }
 
+      // Optional cleanup (safe)
       const icsContent = extractICS(rawText);
 
+      // Download
       downloadICS(icsContent);
     } catch (err) {
       console.error(err);
