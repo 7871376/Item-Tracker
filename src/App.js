@@ -35,6 +35,17 @@ export default function App() {
     }
   };
 
+  function extractICS(text) {
+    const start = text.indexOf("BEGIN:VCALENDAR");
+    const end = text.indexOf("END:VCALENDAR");
+
+    if (start !== -1 && end !== -1) {
+      return text.substring(start, end + "END:VCALENDAR".length);
+    }
+
+    return text;Trouble
+  }
+
   const generateICS = async () => {
     // Ask for API key once per session
     if (!apiKey) {
@@ -72,29 +83,36 @@ export default function App() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
-        },
+         },
         body: JSON.stringify({
-          model: "gpt-5.3",
-          input: promptText,
-        }),
+          model: "gpt-4.1-mini",
+          input: promptText
+        })
       });
 
-      const data = await response.json();
+      // 🔥 ADD THIS
+      console.log("STATUS:", response.status);
 
-      const icsContent =
-        data.output_text || data.output?.[0]?.content?.[0]?.text;
+      const text = await response.text();
+      console.log("RAW RESPONSE:", text);
 
-      console.log("API RESPONSE:", data);
+      // Try parsing safely
+      const rawText =
+        data.output_text ||
+        data.output?.[0]?.content?.[0]?.text;
 
-      if (!icsContent) {
-        console.log("FULL RESPONSE:", data);
-        throw new Error("No ICS content returned");
+      if (!rawText) {
+        console.error("FULL RESPONSE:", data);
+        alert("No content returned from API");
+        return;
       }
+
+      const icsContent = extractICS(rawText);
 
       downloadICS(icsContent);
     } catch (err) {
       console.error(err);
-      alert("Error generating calendar");
+      alert("Error generating calendar.");
     }
   };
 
