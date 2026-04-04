@@ -4,6 +4,7 @@ export default function App() {
   let apiKey = null;
 
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const currentYear = new Date().getFullYear();
 
@@ -62,11 +63,10 @@ export default function App() {
     // Ask for API key once per session
     if (!apiKey) {
       apiKey = window.prompt("Enter your OpenAI API key:");
-      if (!apiKey) {
-        alert("API key is required.");
-        return;
-      }
+      if (!apiKey) return;
     }
+
+    setLoading(true);
 
     const payload = { medications: items };
 
@@ -142,6 +142,8 @@ export default function App() {
     } catch (err) {
       console.error(err);
       alert("Error generating calendar.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -205,9 +207,13 @@ export default function App() {
         <span>&nbsp;&nbsp;&nbsp;</span>
         <button
           onClick={generateICS}
+          disabled={loading || items.length === 0}  
           className="w-full bg-green-500 text-white p-2 rounded-xl"
         >
-          Generate Calendar
+          {loading && (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          )}
+          {loading ? "Generating..." : "Generate Calendar"}
         </button>
       </div>
     </div>
