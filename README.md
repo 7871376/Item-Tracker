@@ -1,2 +1,2 @@
 # Item-Tracker
-Created with CodeSandbox
+AI-powered ICS generator created in React using CodeSandbox. 
