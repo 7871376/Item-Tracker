@@ -46,6 +46,18 @@ export default function App() {
     return text;Trouble
   }
 
+  function downloadICS(icsContent) {
+    const blob = new Blob([icsContent], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "medications.ics";
+    a.click();
+
+    URL.revokeObjectURL(url);
+  }
+
   const generateICS = async () => {
     // Ask for API key once per session
     if (!apiKey) {
