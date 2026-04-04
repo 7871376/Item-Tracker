@@ -52,7 +52,7 @@ export default function App() {
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = "medications.ics";
+    a.download = "items.ics";
     a.click();
 
     URL.revokeObjectURL(url);
@@ -75,19 +75,31 @@ export default function App() {
   INPUT DATA:
   ${JSON.stringify(payload, null, 2)}
   
-  REQUIREMENTS:
-  - Create individual events for each medication refill
+ REQUIREMENTS:
+- For each medication, calculate ONLY the NEXT refill date
   - Refill date = last_purchase + days_supply
-  - Add alert 5 days before
-  - Include run-out date in title and description
-  
-  - ALSO create weekly summary events:
-    - Group by week (Monday start)
-    - Include total cost
-    - Include list of medications
+  - Do NOT generate recurring or future refill cycles
+  - Only include the single next upcoming run-out date per medication
+
+- Create ONE event per medication using that next refill date
+
+- Add an alert 5 days before the refill date
+
+- Include run-out date in title and description
+
+- ALSO create weekly summary events:
+  - ONLY include weeks that contain at least one refill event
+  - Do NOT generate empty weeks
+  - Include total cost for that week
+  - Include list of medications for that week
   
   OUTPUT:
-  Return ONLY valid .ics file content.`;
+  Return ONLY valid .ics file content.
+  
+  IMPORTANT:
+- Do NOT project beyond the next refill date
+- Do NOT create multiple refill events for the same medication
+- Each medication must appear exactly once in the output`;
 
     try {
       const response = await fetch("https://api.openai.com/v1/responses", {
