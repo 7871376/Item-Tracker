@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 export default function App() {
+  let apiKey = null;
+
   const [items, setItems] = useState([]);
 
   const currentYear = new Date().getFullYear();
@@ -34,29 +36,66 @@ export default function App() {
   };
 
   const generateICS = async () => {
+    // Ask for API key once per session
+    if (!apiKey) {
+      apiKey = window.prompt("Enter your OpenAI API key:");
+      if (!apiKey) {
+        alert("API key is required.");
+        return;
+      }
+    }
+
     const payload = { medications: items };
 
-    const prompt = `You are generating a calendar (.ics file).
+    const promptText = `You are generating a calendar (.ics file).
+  
+  INPUT DATA:
+  ${JSON.stringify(payload, null, 2)}
+  
+  REQUIREMENTS:
+  - Create individual events for each medication refill
+  - Refill date = last_purchase + days_supply
+  - Add alert 5 days before
+  - Include run-out date in title and description
+  
+  - ALSO create weekly summary events:
+    - Group by week (Monday start)
+    - Include total cost
+    - Include list of medications
+  
+  OUTPUT:
+  Return ONLY valid .ics file content.`;
 
-INPUT DATA:
-${JSON.stringify(payload, null, 2)}
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-5.3",
+          input: promptText,
+        }),
+      });
 
-REQUIREMENTS:
-- Create individual events for each medication refill
-- Refill date = last_purchase + days_supply
-- Add alert 5 days before
-- Include run-out date in title and description
+      const data = await response.json();
 
-- ALSO create weekly summary events:
-  - Group by week (Monday start)
-  - Include total cost
-  - Include list of medications
+      const icsContent =
+        data.output_text || data.output?.[0]?.content?.[0]?.text;
 
-OUTPUT:
-Return ONLY valid .ics file content.`;
+      console.log("API RESPONSE:", data);
 
-    console.log(prompt);
-    alert("Send this prompt to ChatGPT API and download result");
+      if (!icsContent) {
+        console.log("FULL RESPONSE:", data);
+        throw new Error("No ICS content returned");
+      }
+
+      downloadICS(icsContent);
+    } catch (err) {
+      console.error(err);
+      alert("Error generating calendar");
+    }
   };
 
   return (
