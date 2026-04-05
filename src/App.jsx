@@ -1,20 +1,56 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { extractICS, downloadICS } from "./utils/ics";
+import { getRunOutDate } from "./utils/date";
+import { generateICSFromAPI } from "./api/openai";
 
 export default function App() {
-  let apiKey = null;
-
   const inputRefs = useRef([]);
-  const [items, setItems] = useState([]);
+
+  // 🔥 Load from localStorage on init
+  const [items, setItems] = useState(() => {
+    const saved = localStorage.getItem("items");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [apiKey, setApiKey] = useState(() => {
+    return localStorage.getItem("apiKey") || "";
+  });
+
+  useEffect(() => {
+    if (apiKey) {
+      localStorage.setItem("apiKey", apiKey);
+    }
+  }, [apiKey]);
+
   const [loading, setLoading] = useState(false);
-  const [collapsed, setCollapsed] = useState({});
+
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem("collapsed");
+    return saved ? JSON.parse(saved) : {};
+  });
 
   const currentYear = new Date().getFullYear();
+
+  // 🔥 Persist items
+  useEffect(() => {
+    localStorage.setItem("items", JSON.stringify(items));
+  }, [items]);
+
+  // 🔥 Persist collapsed state
+  useEffect(() => {
+    localStorage.setItem("collapsed", JSON.stringify(collapsed));
+  }, [collapsed]);
 
   const addItem = () => {
     setItems((prev) => [
       ...prev,
       { name: "", last_purchase: "", days_supply: "", cost: "" },
     ]);
+
+    setTimeout(() => {
+      const nextIndex = items.length;
+      inputRefs.current[nextIndex]?.focus();
+    }, 100);
   };
 
   const removeItem = (index) => {
@@ -35,20 +71,16 @@ export default function App() {
     setItems(updated);
   };
 
-  // ?? NEW: collapse only after blur + valid
   const handleBlur = (index) => {
     const item = items[index];
 
     if (isComplete(item)) {
       setCollapsed((prev) => ({ ...prev, [index]: true }));
 
-      // 🔥 focus next item (if exists)
       setTimeout(() => {
         const nextInput = inputRefs.current[index + 1];
-        if (nextInput) {
-          nextInput.focus();
-        }
-      }, 100);
+        if (nextInput) nextInput.focus();
+      }, 120);
     }
   };
 
@@ -66,7 +98,6 @@ export default function App() {
       updateItem(index, "last_purchase", updatedValue);
     }
 
-    // run collapse check AFTER date normalization
     const updated = {
       ...items[index],
       last_purchase: updatedValue,
@@ -77,50 +108,11 @@ export default function App() {
     }
   };
 
-  // ?? Calculate next refill date
-  const getRunOutDate = (item) => {
-    if (!item.last_purchase || !item.days_supply) return null;
-
-    const start = new Date(item.last_purchase);
-    if (isNaN(start)) return null;
-
-    const result = new Date(start);
-    result.setDate(result.getDate() + Number(item.days_supply));
-
-    return result.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  function extractICS(text) {
-    const start = text.indexOf("BEGIN:VCALENDAR");
-    const end = text.indexOf("END:VCALENDAR");
-
-    if (start !== -1 && end !== -1) {
-      return text.substring(start, end + "END:VCALENDAR".length);
-    }
-
-    return text;
-  }
-
-  function downloadICS(icsContent) {
-    const blob = new Blob([icsContent], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "items.ics";
-    a.click();
-
-    URL.revokeObjectURL(url);
-  }
-
   const generateICS = async () => {
-    // Ask for API key once per session
     if (!apiKey) {
-      apiKey = window.prompt("Enter your OpenAI API key:");
-      if (!apiKey) return;
+      const key = window.prompt("Enter your OpenAI API key:");
+      if (!key) return;
+      setApiKey(key);
     }
 
     setLoading(true);
@@ -134,29 +126,14 @@ ${JSON.stringify(payload, null, 2)}
 
 REQUIREMENTS:
 - For each medication, calculate ONLY the NEXT refill date
-  - Refill date = last_purchase + days_supply
-  - Do NOT generate recurring or future refill cycles
-  - Only include the single next upcoming run-out date per medication
+- Do NOT generate recurring or future refill cycles
+- Only include one refill per medication
 
-- Create ONE event per medication using that next refill date
-
-- Add an alert 5 days before the refill date
-
+- Add alert 5 days before
 - Include run-out date in title and description
 
-- ALSO create weekly summary events:
-  - ONLY include weeks that contain at least one refill event
-  - Do NOT generate empty weeks
-  - Include total cost for that week
-  - Include list of medications for that week
-  
-  OUTPUT:
-  Return ONLY valid .ics file content.
-  
-  IMPORTANT:
-  - Do NOT project beyond the next refill date
-  - Do NOT create multiple refill events for the same medication
-  - Each medication must appear exactly once in the output`;
+OUTPUT:
+Return ONLY valid .ics file content.`;
 
     try {
       const response = await fetch("https://api.openai.com/v1/responses", {
@@ -171,32 +148,19 @@ REQUIREMENTS:
         }),
       });
 
-      // ?? ADD THIS
-      console.log("STATUS:", response.status);
-
       const text = await response.text();
-      console.log("RAW RESPONSE:", text);
-
-      // Parse JSON
       const data = JSON.parse(text);
 
-      // ? Extract ICS (this is the correct path based on your output)
-      const rawText = data.output?.[0]?.content?.[0]?.text || data.output_text;
+      //const rawText = data.output?.[0]?.content?.[0]?.text || data.output_text;
+      const rawText = await generateICSFromAPI(apiKey, promptText);
 
-      if (!rawText) {
-        console.error("FULL RESPONSE:", data);
-        alert("No ICS content returned");
-        return;
-      }
+      if (!rawText) return;
 
-      // Optional cleanup (safe)
       const icsContent = extractICS(rawText);
 
-      // Download
       downloadICS(icsContent);
     } catch (err) {
       console.error(err);
-      alert("Error generating calendar.");
     } finally {
       setLoading(false);
     }
@@ -219,12 +183,19 @@ REQUIREMENTS:
             const collapsedView = collapsed[i] && isComplete(itm);
             const runOut = getRunOutDate(itm);
 
+            const urgencyColor = runOut
+              ? runOut.daysLeft <= 3
+                ? "text-red-600"
+                : runOut.daysLeft <= 7
+                ? "text-yellow-600"
+                : "text-green-600"
+              : "";
+
             return (
               <div
                 key={i}
-                className="bg-white p-4 rounded-2xl shadow-sm border transition-all"
+                className="bg-white p-4 rounded-2xl shadow-sm border transition-all duration-200"
               >
-                {/* Header */}
                 <div className="flex justify-between items-center mb-2">
                   <button
                     onClick={() => toggleCollapse(i)}
@@ -235,8 +206,8 @@ REQUIREMENTS:
                     </div>
 
                     {collapsedView && runOut && (
-                      <div className="text-xs text-gray-500">
-                        Runs out {runOut}
+                      <div className={`text-xs ${urgencyColor}`}>
+                        Runs out {runOut.date} ({runOut.daysLeft}d)
                       </div>
                     )}
                   </button>
@@ -253,13 +224,12 @@ REQUIREMENTS:
                   </button>
                 </div>
 
-                {/* Expanded */}
                 {!collapsedView && (
                   <>
                     <input
                       ref={(el) => (inputRefs.current[i] = el)}
                       className="w-full mb-3 p-3 border rounded-xl text-base"
-                      placeholder="Medication Name"
+                      placeholder="Item Name"
                       value={itm.name}
                       onChange={(e) => updateItem(i, "name", e.target.value)}
                       onBlur={() => handleBlur(i)}
@@ -292,10 +262,9 @@ REQUIREMENTS:
                       />
                     </div>
 
-                    {/* Live preview */}
                     {runOut && (
-                      <div className="text-sm text-green-600 mt-2">
-                        Runs out: {runOut}
+                      <div className={`text-sm mt-2 ${urgencyColor}`}>
+                        Runs out: {runOut.date} ({runOut.daysLeft} days)
                       </div>
                     )}
 
@@ -331,10 +300,13 @@ REQUIREMENTS:
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
         <button
           onClick={generateICS}
-          disabled={items.length === 0}
-          className="w-full bg-green-600 text-white p-4 rounded-2xl font-medium disabled:opacity-50"
+          disabled={items.length === 0 || loading}
+          className="w-full bg-green-600 text-white p-4 rounded-2xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          Generate Calendar
+          {loading && (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          )}
+          {loading ? "Generating..." : "Generate Calendar"}
         </button>
       </div>
     </div>
