@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function App() {
   let apiKey = null;
 
+  const inputRefs = useRef([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState({});
@@ -40,6 +41,14 @@ export default function App() {
 
     if (isComplete(item)) {
       setCollapsed((prev) => ({ ...prev, [index]: true }));
+
+      // 🔥 focus next item (if exists)
+      setTimeout(() => {
+        const nextInput = inputRefs.current[index + 1];
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 100);
     }
   };
 
@@ -201,7 +210,7 @@ REQUIREMENTS:
             Item Tracker
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Track refills and generate your calendar
+            Track items and generate your calendar
           </p>
         </div>
 
@@ -222,7 +231,7 @@ REQUIREMENTS:
                     className="text-left flex-1"
                   >
                     <div className="text-sm font-medium text-gray-700">
-                      {itm.name || "Medication"}
+                      {itm.name || "Item Name"}
                     </div>
 
                     {collapsedView && runOut && (
@@ -248,8 +257,9 @@ REQUIREMENTS:
                 {!collapsedView && (
                   <>
                     <input
+                      ref={(el) => (inputRefs.current[i] = el)}
                       className="w-full mb-3 p-3 border rounded-xl text-base"
-                      placeholder="Item Name"
+                      placeholder="Medication Name"
                       value={itm.name}
                       onChange={(e) => updateItem(i, "name", e.target.value)}
                       onBlur={() => handleBlur(i)}
