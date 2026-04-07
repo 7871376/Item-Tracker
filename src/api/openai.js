@@ -16,3 +16,21 @@ export async function generateICSFromAPI(apiKey, promptText) {
 
   return data.output?.[0]?.content?.[0]?.text || data.output_text;
 }
+
+export const testApiKey = async (apiKey) => {
+  try {
+    const response = await fetch("https://api.openai.com/v1/models", {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Invalid API key");
+    }
+
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
