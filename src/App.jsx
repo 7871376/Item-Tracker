@@ -130,7 +130,8 @@ REQUIREMENTS:
 - Only include one refill per medication
 
 - Add alert 5 days before
-- Include run-out date in title and description
+- Include run-out date in title and description. Use the phrase "refill by " followed by the run-out date.
+- Include projected cost in description after the run-out date. Use the phrase "Projected cost: $" followed by the cost.
 
 OUTPUT:
 Return ONLY valid .ics file content.`;
@@ -207,7 +208,7 @@ Return ONLY valid .ics file content.`;
 
                     {collapsedView && runOut && (
                       <div className={`text-xs ${urgencyColor}`}>
-                        Runs out {runOut.date} ({runOut.daysLeft}d)
+                        Refill by {runOut.date} ({runOut.daysLeft} days)
                       </div>
                     )}
                   </button>
@@ -264,7 +265,7 @@ Return ONLY valid .ics file content.`;
 
                     {runOut && (
                       <div className={`text-sm mt-2 ${urgencyColor}`}>
-                        Runs out: {runOut.date} ({runOut.daysLeft} days)
+                        Refill by {runOut.date} ({runOut.daysLeft} days)
                       </div>
                     )}
 
@@ -292,6 +293,7 @@ Return ONLY valid .ics file content.`;
         <button
           onClick={addItem}
           className="w-full mt-4 bg-white border border-dashed border-gray-300 text-gray-600 p-3 rounded-xl"
+          title="Add an item to your list."
         >
           + Add Item
         </button>
@@ -302,6 +304,7 @@ Return ONLY valid .ics file content.`;
           onClick={generateICS}
           disabled={items.length === 0 || loading}
           className="w-full bg-green-600 text-white p-4 rounded-2xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          title="Generate your calendar file"
         >
           {loading && (
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
