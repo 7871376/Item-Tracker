@@ -22,6 +22,9 @@ export default function App() {
     return "";
   };
 
+  //add state for hide/show API key
+  const [showApiKey, setShowApiKey] = useState(false);
+
   //add states for API key verification
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(null); // null | true | false
@@ -213,7 +216,7 @@ Return ONLY valid .ics file content.`;
               <img
                 src="/OpenAI-black-monoblossom.png"
                 alt="OpenAI"
-                className="h-16 w-auto opacity-70"
+                className="h-20 w-auto opacity-100"
               />
               <span className="text-sm text-gray-600">Uses OpenAI API</span>
             </div>
@@ -229,24 +232,34 @@ Return ONLY valid .ics file content.`;
               </h2>
             </div>
             <div className="flex flex-col items-center">
-              <input
-                type="text"
-                value={apiKey}
-                onChange={(e) => {
-                  const value = e.target.value.trim();
-                  setApiKey(value);
-                  setApiKeyError(validateApiKey(value));
-                }}
-                placeholder="sk-..."
-                maxLength={100}
-                className="w-200 border rounded p-2 mb-4"
-              />
+              <div className="relative w-full max-w-md">
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    setApiKey(value);
+                    setApiKeyError(validateApiKey(value));
+                    setIsVerified(null);
+                  }}
+                  placeholder="sk-..."
+                  className="w-full max-w-md border rounded p-2 pr-10"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+                >
+                  {showApiKey ? "Hide" : "Show"}
+                </button>
+              </div>
 
               <a
                 href="https://platform.openai.com/api-keys"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-blue-600 underline mb-4"
+                className="text-sm text-blue-600 underline mb-8"
               >
                 Don’t have an API key? Get one!
               </a>
@@ -261,17 +274,17 @@ Return ONLY valid .ics file content.`;
                   setIsVerified(result);
                   setIsVerifying(false);
                 }}
-                className="bg-purple-500 text-white px-4 py-2 rounded mb-10 p-4"
+                className="bg-purple-500 text-white px-4 py-2 rounded mb-14 p-4"
               >
                 {isVerifying ? "Verifying..." : "Verify API Key"}
                 {isVerified === true && (
-                  <p className="text-white-600 text-sm mb-2">
+                  <p className="text-white-600 text-sm mt-1 mb-2">
                     ✅ API key is valid
                   </p>
                 )}
 
                 {isVerified === false && (
-                  <p className="text-white-500 text-sm mb-2">
+                  <p className="text-white-500 text-sm mt-1 mb-2">
                     ❌ API key is invalid
                   </p>
                 )}
@@ -342,7 +355,7 @@ Return ONLY valid .ics file content.`;
                 Item Tracker
               </h1>
               <p className="text-gray-500 text-sm mt-1">
-                Track items and generate your calendar
+                Track items and add them to your calendar
               </p>
             </div>
 
